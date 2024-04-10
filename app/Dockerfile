@@ -21,7 +21,7 @@ RUN wget -O install.sh ${BAOTA_INSTALL_PATH} && \
     /bin/bash /www/server/panel/install/install_soft.sh 0 install php 8.0 nginx 1.24 mysql 5.7
 
 # 复制启动脚本到容器
-COPY app.sh /
+COPY /app/app.sh /
 
 # 赋予启动脚本执行权限
 RUN chmod +x /app.sh
