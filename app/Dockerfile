@@ -12,7 +12,7 @@ FROM centos:${CENTOS_VERSION}
 LABEL maintainer="ifui <ifui@foxmail.com>"
 
 # 创建用户组和用户
-RUN groupadd -f www && useradd -g www www
+RUN groupadd -g 1000 www && useradd -g www -u 1000 -d /home/www -m www
 
 # 安装系统工具和依赖软件
 RUN yum install -y wget ca-certificates gd && \
@@ -28,7 +28,7 @@ RUN wget -O install.sh ${BAOTA_INSTALL_PATH} && \
 COPY app.sh /
 
 # 赋予启动脚本执行权限
-RUN chmod 777 /app.sh
+RUN chmod +x /app.sh
 
 # 设置默认命令 
-CMD ["sh", "-c", "/app.sh & tail -f /dev/null"]
+CMD ["sh", "-c", "/app.sh && tail -f /dev/null"]
