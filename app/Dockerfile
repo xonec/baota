@@ -10,11 +10,14 @@ RUN echo 'bt' > /etc/hostname \
     && yum install -y wget \
     && yum install -y ca-certificates \
     && yum install -y gd
-
+    
 # install baota
 RUN set -eux \
     && wget -O install.sh ${BAOTA_INSTALL_PATH} \
-    && echo y | sh install.sh
+    && echo y | sh install.sh \
+    && chmod +x /www/server/panel/install/install_soft.sh \
+    && /bin/bash /www/server/panel/install/install_soft.sh 0 install php ${PHP_VERSION} nginx ${NGINX_VERSION} mysql ${MYSQL_VERSION}
+
 
 COPY app.sh /
 
