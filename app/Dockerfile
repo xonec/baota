@@ -24,11 +24,4 @@ RUN wget -O install.sh ${BAOTA_INSTALL_PATH} && \
     chmod +x /www/server/panel/install/install_soft.sh && \
     /bin/bash /www/server/panel/install/install_soft.sh 0 install php ${PHP_VERSION} nginx ${NGINX_VERSION} mysql ${MYSQL_VERSION}
 
-# 复制启动脚本到容器
-COPY app.sh /
 
-# 赋予启动脚本执行权限
-RUN chmod +x /app.sh
-
-# 设置默认命令 
-CMD ["sh", "-c", "/app.sh && tail -f /dev/null"]
