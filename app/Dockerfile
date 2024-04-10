@@ -30,5 +30,5 @@ COPY app.sh /
 # 赋予启动脚本执行权限
 RUN chmod 777 /app.sh
 
-# 定义容器启动时执行的命令
-CMD ["/app.sh"]
+# 设置默认命令 
+CMD ["sh", "-c", "/app.sh & tail -f /dev/null"]
