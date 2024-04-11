@@ -20,10 +20,11 @@ RUN wget -O off_install.sh $BAOTA_INSTALL_PATH && \
     chmod +x off_install.sh && \
     echo y | sh off_install.sh --nginx-install 1.21 --php-install 8.0 --mysql-install 5.7 --phpmyadmin-install 5.0 && \
     wget -O update_panel.sh $BAOTA_UPDATE_PATH && \
+    chmod +x update_panel.sh && \
     echo y | sh update_panel.sh
-    
+
 # 复制启动脚本到容器
-COPY app/app.sh /
+COPY app.sh /
 
 # 赋予启动脚本执行权限
 RUN chmod +x /app.sh
