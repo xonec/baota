@@ -19,7 +19,9 @@ ARG BAOTA_UPDATE_PATH=https://io.bt.sy/install/update_panel.sh
 RUN wget -O install.sh ${BAOTA_INSTALL_PATH} && \
     echo y | sh install.sh && \
     chmod +x /www/server/panel/install/install_soft.sh && \
-    /bin/bash /www/server/panel/install/install_soft.sh 0 install php 8.0 nginx 1.24 mysql 5.7 && \
+    bash /www/server/panel/install/install_soft.sh 0 install php 8.0 && \
+    bash /www/server/panel/install/install_soft.sh 0 install nginx 1.24 && \
+    bash /www/server/panel/install/install_soft.sh 0 install mysql 5.7 && \
     wget -O update_panel.sh ${BAOTA_UPDATE_PATH} && \
     echo y | sh update_panel.sh
     
