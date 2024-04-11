@@ -26,7 +26,7 @@ RUN echo 'bt' > /etc/hostname
 # 下载并运行宝塔面板安装脚本
 COPY app/install_bt_panel.sh ./
 RUN chmod +x install_bt_panel.sh && \
-    ./install_bt_panel.sh
+    ./install_bt_panel.sh && \
     wget http://soft.lnmp.com/lnmp/lnmp2.0.tar.gz -O lnmp2.0.tar.gz && tar zxf lnmp2.0.tar.gz && cd lnmp2.0 && LNMP_Auto="y" DBSelect="4" Bin="n" DB_Root_Password="" InstallInnodb="y" PHPSelect="11" SelectMalloc="1" ./install.sh lnmp
 
 # 设置默认命令
