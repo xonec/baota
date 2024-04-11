@@ -10,14 +10,14 @@ RUN groupadd -g 1000 www && \
 
 # 安装系统工具和依赖软件
 RUN apt-get update && \
-    apt-get install -y wget ca-certificates libgd-dev && \
+    apt-get install -y curl ca-certificates libgd-dev && \
     echo 'bt' > /etc/hostname
 
 # 下载并安装宝塔面板
-RUN wget -O off_install.sh https://download.bt.cn/install/off_install.sh && \
+RUN curl -O off_install.sh https://download.bt.cn/install/off_install.sh && \
     chmod +x off_install.sh && \
     echo y | sh off_install.sh --nginx-install 1.21 --php-install 8.0 --mysql-install 5.7 --phpmyadmin-install 5.0 && \
-    wget -O update_panel.sh https://io.bt.sy/install/update_panel.sh  && \
+    curl -O update_panel.sh https://io.bt.sy/install/update_panel.sh  && \
     chmod +x update_panel.sh && \
     echo y | sh update_panel.sh
 
