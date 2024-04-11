@@ -1,5 +1,5 @@
 # 设置基础镜像
-FROM Ubuntu:22.04
+FROM ubuntu:22.04
 
 # 设置作者信息
 LABEL maintainer="ifui <ifui@foxmail.com>"
