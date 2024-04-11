@@ -10,7 +10,7 @@ RUN groupadd -g 1000 www && \
 
 # 安装系统工具和依赖软件
 RUN apt-get update && \
-    apt-get install -y wget curl unzip ca-certificates libgd-dev procps && \
+    apt-get install -y wget curl unzip ca-certificates libgd-dev procps sudo && \
     rm -rf /var/lib/apt/lists/*
 
 # 复制启动脚本到容器
@@ -24,8 +24,8 @@ RUN chmod +x app.sh off_install.sh update_panel.sh
 RUN echo 'bt' > /etc/hostname
 
 # 运行宝塔面板安装脚本
-RUN echo y | bash off_install.sh --nginx-install 1.21 --php-install 8.0 --mysql-install 5.7 --phpmyadmin-install 5.0 && \
-    echo y | bash update_panel.sh
+RUN echo y | sudo bash off_install.sh --nginx-install 1.21 --php-install 8.0 --mysql-install 5.7 --phpmyadmin-install 5.0 && \
+    echo y | sudo bash update_panel.sh
 
 # 设置默认命令
 CMD ["./app.sh"]
