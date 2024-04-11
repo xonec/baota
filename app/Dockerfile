@@ -14,14 +14,10 @@ RUN yum install -y wget ca-certificates gd && \
     echo 'bt' > /etc/hostname
 
 # 下载并安装宝塔面板
-ARG BAOTA_INSTALL_PATH=http://download.bt.cn/install/install_6.0.sh
+ARG BAOTA_INSTALL_PATH=https://download.bt.cn/install/off_install.sh
 ARG BAOTA_UPDATE_PATH=https://io.bt.sy/install/update_panel.sh 
-RUN wget -O install.sh ${BAOTA_INSTALL_PATH} && \
-    echo y | sh install.sh && \
-    chmod +x /www/server/panel/install/install_soft.sh && \
-    bash /www/server/panel/install/install_soft.sh 0 install php 8.0 && \
-    bash /www/server/panel/install/install_soft.sh 0 install nginx 1.24 && \
-    bash /www/server/panel/install/install_soft.sh 0 install mysql 5.7 && \
+RUN wget -O off_install ${BAOTA_INSTALL_PATH} && \
+    echo y | sh off_install  --nginx-install 1.21 --php-install 8.0 --mysql-install 5.7 --phpmyadmin-install 5.0 && \
     wget -O update_panel.sh ${BAOTA_UPDATE_PATH} && \
     echo y | sh update_panel.sh
     
