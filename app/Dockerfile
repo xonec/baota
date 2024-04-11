@@ -24,7 +24,7 @@ RUN wget -O off_install.sh $BAOTA_INSTALL_PATH && \
     echo y | sh update_panel.sh
 
 # 复制启动脚本到容器
-COPY app.sh /
+COPY app/app.sh /
 
 # 赋予启动脚本执行权限
 RUN chmod +x /app.sh
