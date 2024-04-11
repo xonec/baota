@@ -10,7 +10,7 @@ RUN groupadd -g 1000 www && \
 
 # 安装系统工具和依赖软件
 RUN apt-get update && \
-    apt-get install -y wget curl unzip ca-certificates libgd-dev procps sudo && \
+    apt-get install -y wget curl unzip && \
     rm -rf /var/lib/apt/lists/*
 
 # 复制启动脚本到容器
