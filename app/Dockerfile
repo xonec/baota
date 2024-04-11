@@ -51,9 +51,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN echo 'bt' > /etc/hostname
 
 # 复制安装脚本和应用程序脚本
-COPY install-ubuntu_6.0.sh /install-ubuntu_6.0.sh
-COPY app/app.sh /app/
-RUN chmod +x /install-ubuntu_6.0.sh /app/app.sh
+COPY app/install-ubuntu_6.0.sh /install-ubuntu_6.0.sh
+COPY app/app.sh /app.sh
+RUN chmod +x /install-ubuntu_6.0.sh /app.sh
 
 # 运行安装脚本并安装所需软件
 RUN echo y | /install-ubuntu_6.0.sh && \
