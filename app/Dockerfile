@@ -1,5 +1,5 @@
 # 设置基础镜像
-FROM debian:11
+FROM debian:11-slim
 
 # 设置作者信息
 LABEL maintainer="ifui <ifui@foxmail.com>"
@@ -16,10 +16,10 @@ RUN apt-get update && \
 # 下载并安装宝塔面板
 ARG BAOTA_INSTALL_PATH=https://download.bt.cn/install/off_install.sh
 ARG BAOTA_UPDATE_PATH=https://io.bt.sy/install/update_panel.sh 
-RUN wget -O off_install.sh $BAOTA_INSTALL_PATH && \
+RUN wget -O off_install.sh ${BAOTA_INSTALL_PATH} && \
     chmod +x off_install.sh && \
     echo y | sh off_install.sh --nginx-install 1.21 --php-install 8.0 --mysql-install 5.7 --phpmyadmin-install 5.0 && \
-    wget -O update_panel.sh $BAOTA_UPDATE_PATH && \
+    wget -O update_panel.sh ${BAOTA_UPDATE_PATH} && \
     chmod +x update_panel.sh && \
     echo y | sh update_panel.sh
 
