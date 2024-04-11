@@ -10,22 +10,21 @@ RUN groupadd -g 1000 www && \
 
 # 安装系统工具和依赖软件
 RUN apt-get update && \
-    apt-get install -y curl ca-certificates libgd-dev && \
-    echo 'bt' > /etc/hostname
-
-# 下载并安装宝塔面板
-RUN curl -O off_install.sh https://download.bt.cn/install/off_install.sh && \
-    chmod +x off_install.sh && \
-    echo y | sh off_install.sh --nginx-install 1.21 --php-install 8.0 --mysql-install 5.7 --phpmyadmin-install 5.0 && \
-    curl -O update_panel.sh https://io.bt.sy/install/update_panel.sh  && \
-    chmod +x update_panel.sh && \
-    echo y | sh update_panel.sh
+    rm -rf /var/lib/apt/lists/*
 
 # 复制启动脚本到容器
-COPY app/app.sh /
+WORKDIR /
+COPY app/app.sh app/off_install.sh app/update_panel.sh ./
 
 # 赋予启动脚本执行权限
-RUN chmod +x /app.sh
+RUN chmod +x app.sh off_install.sh update_panel.sh
+
+# 设置主机名
+RUN echo 'bt' > /etc/hostname
+
+# 运行宝塔面板安装脚本
+RUN echo y | sh off_install.sh --nginx-install 1.21 --php-install 8.0 --mysql-install 5.7 --phpmyadmin-install 5.0 && \
+    echo y | sh update_panel.sh
 
 # 设置默认命令
-CMD ["/app.sh"]
+CMD ["./app.sh"]
