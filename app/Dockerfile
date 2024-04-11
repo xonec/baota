@@ -23,8 +23,8 @@ RUN chmod +x app.sh off_install.sh update_panel.sh
 RUN echo 'bt' > /etc/hostname
 
 # 运行宝塔面板安装脚本
-RUN echo y | sh off_install.sh --nginx-install 1.21 --php-install 8.0 --mysql-install 5.7 --phpmyadmin-install 5.0 && \
-    echo y | sh update_panel.sh
+RUN echo y | bash off_install.sh --nginx-install 1.21 --php-install 8.0 --mysql-install 5.7 --phpmyadmin-install 5.0 && \
+    echo y | bash update_panel.sh
 
 # 设置默认命令
 CMD ["./app.sh"]
