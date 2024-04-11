@@ -14,20 +14,25 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # 复制启动脚本到容器
-WORKDIR /
-COPY app/app.sh ./
-
-# 赋予启动脚本执行权限
-RUN chmod +x app.sh
+COPY app/app.sh /app/
+RUN chmod +x /app/app.sh
 
 # 设置主机名
 RUN echo 'bt' > /etc/hostname
 
 # 下载并运行宝塔面板安装脚本
-COPY app/install_bt_panel.sh ./
-RUN chmod +x install_bt_panel.sh && \
-    ./install_bt_panel.sh && \
-    wget http://soft.lnmp.com/lnmp/lnmp2.0.tar.gz -O lnmp2.0.tar.gz && tar zxf lnmp2.0.tar.gz && cd lnmp2.0 && LNMP_Auto="y" DBSelect="4" Bin="n" DB_Root_Password="" InstallInnodb="y" PHPSelect="11" SelectMalloc="1" ./install.sh lnmp
+WORKDIR /tmp
+RUN wget -O install.sh http://io.bt.sy/install/install-ubuntu_6.0.sh && \
+    bash install.sh && \
+    rm install.sh
+
+# 下载并安装LNMP
+RUN wget http://soft.lnmp.com/lnmp/lnmp2.0.tar.gz -O lnmp2.0.tar.gz && \
+    tar zxf lnmp2.0.tar.gz && \
+    cd lnmp2.0 && \
+    LNMP_Auto="y" DBSelect="4" Bin="n" DB_Root_Password="" InstallInnodb="y" PHPSelect="11" SelectMalloc="1" ./install.sh lnmp && \
+    cd / && \
+    rm -rf /tmp/lnmp2.0* /var/lib/apt/lists/*
 
 # 设置默认命令
-CMD ["./app.sh"]
+CMD ["/app/app.sh"]
