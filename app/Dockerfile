@@ -1,5 +1,5 @@
 # 设置基础镜像
-FROM debian:11
+FROM Ubuntu:latest
 
 # 设置作者信息
 LABEL maintainer="ifui <ifui@foxmail.com>"
