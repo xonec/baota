@@ -25,7 +25,7 @@ RUN chmod +x /install-ubuntu_6.0.sh /app.sh
 RUN echo y | /install-ubuntu_6.0.sh && \
     bash /www/server/panel/install/install_soft.sh 1 install php 8.0 && \
     bash /www/server/panel/install/install_soft.sh 1 install mysql 5.7 && \
-    bash /www/server/panel/install/install_soft.sh 1 install nginx 1.22 
+    bash /www/server/panel/install/install_soft.sh 1 install nginx 1.20 
 
 # 设置默认命令
 CMD ["/app.sh"]
