@@ -1,10 +1,24 @@
 # 使用官方的Ubuntu 20.04作为基础镜像
 FROM ubuntu:20.04
 
-# 设置时区为亚洲/上海
-ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
-    echo 'bt' > /etc/hostname
+# 设置时区为亚洲/上海，并修改主机名为 "bt"
+ENV TZ=Asia/Shanghai \
+    HOSTNAME=bt
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone && \
+    echo $HOSTNAME > /etc/hostname \
+    && apt update -y \
+    && apt upgrade -y \
+    && apt install -y apt-file \
+    && apt-file update \
+    && apt install -y iproute2 net-tools iputils-ping libsasl2-dev init openssh-server \
+                      vim libc-ares2 sudo p7zip-full curl zip unzip wget libcurl4-openssl-dev expect \
+                      libdatrie1 libnss3 libatk1.0-0 libatk-bridge2.0-0 libgdk-pixbuf2.0-0 libgtk-3-0 \
+                      libfuse2 psmisc fuse libxml2-dev openssl* libcurl4-openssl-dev pkg-config \
+                      fonts-wqy-microhei fonts-wqy-zenhei fonts-arphic-ukai fonts-arphic-uming \
+                      fontconfig xfonts-utils language-pack-zh-hans autoconf g++ make openssl libssl-dev
+
 
 # 复制安装脚本和应用程序脚本
 COPY app/install-ubuntu_6.0.sh /install-ubuntu_6.0.sh
