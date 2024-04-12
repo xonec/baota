@@ -3,7 +3,8 @@ FROM ubuntu:20.04
 
 # 设置时区为亚洲/上海
 ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
+ echo 'bt' > /etc/hostname
 
 # 更新源并安装必要的软件包
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -46,9 +47,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     make \
     libssl-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# 设置主机名
-RUN echo 'bt' > /etc/hostname
 
 # 复制安装脚本和应用程序脚本
 COPY app/install-ubuntu_6.0.sh /install-ubuntu_6.0.sh
