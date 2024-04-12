@@ -6,16 +6,6 @@ ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
     echo 'bt' > /etc/hostname
 
-# 更新源并安装必要的软件包
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    vim \
-    sudo \
-    curl \
-    zip \
-    unzip \
-    wget \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
 # 复制安装脚本和应用程序脚本
 COPY app/install-ubuntu_6.0.sh /install-ubuntu_6.0.sh
 COPY app/app.sh /app.sh
@@ -23,9 +13,10 @@ RUN chmod +x /install-ubuntu_6.0.sh /app.sh
 
 # 运行安装脚本并安装所需软件
 RUN echo y | /install-ubuntu_6.0.sh && \
-    bash /www/server/panel/install/install_soft.sh 1 install php 8.2 && \
-    bash /www/server/panel/install/install_soft.sh 1 install mysql 8.0 && \
-    bash /www/server/panel/install/install_soft.sh 1 install nginx 1.24 
+    sleep 3  && \
+    bash /www/server/panel/install/install_soft.sh 0 install php 8.2 && \
+    bash /www/server/panel/install/install_soft.sh 0 install mysql 8.0 && \
+    bash /www/server/panel/install/install_soft.sh 0 install nginx 1.24 
 
 # 设置默认命令
 CMD ["/app.sh"]
