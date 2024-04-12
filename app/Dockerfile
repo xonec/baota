@@ -62,4 +62,4 @@ RUN echo y | /install-ubuntu_6.0.sh && \
     bash /www/server/panel/install/install_soft.sh 0 install nginx 1.22 
 
 # 设置默认命令
-CMD ["/app/app.sh"]
+CMD ["/app.sh"]
