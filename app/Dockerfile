@@ -8,44 +8,12 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &
 
 # 更新源并安装必要的软件包
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    iproute2 \
-    net-tools \
-    iputils-ping \
-    libsasl2-dev \
-    openssh-server \
     vim \
-    libc-ares2 \
     sudo \
-    p7zip-full \
     curl \
     zip \
     unzip \
     wget \
-    libcurl4-openssl-dev \
-    expect \
-    libdatrie1 \
-    libnss3 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libgdk-pixbuf2.0-0 \
-    libgtk-3-0 \
-    libfuse2 \
-    psmisc \
-    fuse \
-    libxml2-dev \
-    openssl \
-    pkg-config \
-    fonts-wqy-microhei \
-    fonts-wqy-zenhei \
-    fonts-arphic-ukai \
-    fonts-arphic-uming \
-    fontconfig \
-    xfonts-utils \
-    language-pack-zh-hans \
-    autoconf \
-    g++ \
-    make \
-    libssl-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 复制安装脚本和应用程序脚本
