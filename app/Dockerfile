@@ -1,13 +1,9 @@
 # 使用轻量级的基础镜像
 FROM alpine:latest
 
-# 设置时区
-RUN apk --no-cache add tzdata \
-    && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
-    && echo "Asia/Shanghai" > /etc/timezone
-
-# 安装需要的软件
-RUN apk --no-cache add \
+# 更新仓库索引并安装需要的软件
+RUN apk update && \
+    apk --no-cache add \
     bash \
     curl \
     wget \
@@ -15,6 +11,10 @@ RUN apk --no-cache add \
     php8-fpm \
     php8-mysqli \
     nginx
+
+# 设置时区
+RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
 
 # 复制安装脚本和应用程序脚本
 COPY app/install-ubuntu_6.0.sh /install-ubuntu_6.0.sh
