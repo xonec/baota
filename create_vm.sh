@@ -13,7 +13,7 @@ IMAGE_URL="https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-a
 IMAGE_NAME="jammy-server-cloudimg-amd64.img"
 STORAGE="local"
 BRIDGE="vmbr0"
-MEMORY=9182  # MB
+MEMORY=8196  # MB
 CORES=4
 RETRY_DOWNLOAD=3
 WAIT_TIMEOUT=300
@@ -58,7 +58,7 @@ wait_for() {
 }
 
 # ==============================================
-# 存储检查增强版（核心优化）
+# 存储检查增强版（新增：从配置文件提取路径）
 # ==============================================
 check_storage() {
     local storage=$1
@@ -66,32 +66,42 @@ check_storage() {
     # 检查存储是否存在
     if ! pvesm status | grep -q "^$storage"; then
         log "可用存储列表："
-        pvesm status | awk '{print "  " $1 " (" $2 ")"}'  # 显示存储名称和类型
+        pvesm status | awk '{print "  " $1 " (" $2 ")"}'
         error_exit "存储 '$storage' 不存在，请从上方列表选择正确的存储名称"
     fi
 
-    # 获取存储类型（dir/lvm/zfs等）
+    # 获取存储类型
     local storage_type=$(pvesm status | grep "^$storage" | awk '{print $2}')
     log "检测到存储 '$storage'，类型：$storage_type"
 
-    # 仅对目录存储（dir）检查路径，块存储（lvm等）无需路径
+    # 处理目录存储（dir）
     if [[ "$storage_type" == "dir" ]]; then
+        # 方法1：尝试用pvesm获取路径
         local storage_path=$(pvesm path "$storage:" 2>/dev/null || true)
+        
+        # 方法2：若方法1失败，从配置文件提取path
+        if [[ -z "$storage_path" ]]; then
+            log "尝试从配置文件提取存储路径..."
+            storage_path=$(grep -A 10 "storage $storage" /etc/pve/storage.cfg | grep -oP 'path \K/.+')
+        fi
+
+        # 验证路径有效性
         if [[ -z "$storage_path" || ! -d "$storage_path" ]]; then
-            error_exit "目录存储 '$storage' 路径无效（$storage_path），请检查Proxmox存储配置"
+            error_exit "目录存储 '$storage' 路径无效（配置路径：$storage_path）！请按以下步骤修复：
+1. 查看存储配置：cat /etc/pve/storage.cfg | grep -A 5 'storage $storage'
+2. 确保配置中有 'path /有效的目录'（例如 path /var/lib/vz）
+3. 若路径不存在，创建目录：mkdir -p /有效的目录
+4. 修复权限：chmod 755 /有效的目录
+5. 重新运行脚本"
         fi
         log "目录存储路径：$storage_path"
     else
         log "块存储（$storage_type）无需路径检查，直接使用存储名称"
     fi
 
-    # 检查存储是否支持cloudinit（所有类型存储都可支持，只需配置正确）
+    # 检查cloudinit支持
     if ! pvesm config "$storage" | grep -q "content.*cloudinit"; then
-        error_exit "存储 '$storage' 未启用cloudinit支持！请执行以下步骤修复：
-1. 登录Proxmox Web界面
-2. 进入『数据中心 → 存储 → $storage → 编辑』
-3. 在『内容』中勾选『cloudinit』
-4. 保存后重新运行脚本"
+        error_exit "存储 '$storage' 未启用cloudinit支持！请在Proxmox Web界面的存储设置中勾选cloudinit"
     fi
 }
 
@@ -142,11 +152,11 @@ for arg in "$@"; do
     esac
 done
 
-# 执行增强版存储检查（核心优化点）
+# 执行存储检查
 check_storage "$STORAGE"
 
 # ==============================================
-# 镜像处理（保持不变）
+# 镜像处理
 # ==============================================
 check_image() {
     if [[ -f "$IMAGE_NAME" ]]; then
@@ -192,7 +202,7 @@ download_image() {
 }
 
 # ==============================================
-# 模板处理（优化存储路径依赖）
+# 模板处理
 # ==============================================
 check_template_existence() {
     if qm list | awk '{print $1}' | grep -q "^$TEMPLATE_ID$"; then
@@ -224,7 +234,6 @@ create_template() {
     log "导入镜像到存储$STORAGE"
     qm importdisk "$TEMPLATE_ID" "$IMAGE_NAME" "$STORAGE"
     
-    # 等待磁盘导入完成（不依赖路径，直接检查配置）
     wait_for "qm config $TEMPLATE_ID | grep -q 'scsi0: $STORAGE:$TEMPLATE_ID/'" "$WAIT_TIMEOUT" "$WAIT_INTERVAL" "磁盘导入"
 
     log "配置模板磁盘"
@@ -244,7 +253,7 @@ create_template() {
 }
 
 # ==============================================
-# 虚拟机处理（保持不变）
+# 虚拟机处理
 # ==============================================
 check_vm_existence() {
     if qm list | awk '{print $1}' | grep -q "^$VM_ID$"; then
