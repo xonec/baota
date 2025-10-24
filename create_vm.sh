@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ==============================================
-# 配置参数（可通过命令行参数覆盖）
+# 配置参数
 # ==============================================
 TEMPLATE_ID=9001
 VM_ID=101
@@ -13,8 +13,8 @@ IMAGE_URL="https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-a
 IMAGE_NAME="jammy-server-cloudimg-amd64.img"
 STORAGE="local"
 BRIDGE="vmbr0"
-MEMORY=8196  # MB
-CORES=4
+MEMORY=8196
+CORES=8
 RETRY_DOWNLOAD=3
 WAIT_TIMEOUT=300
 WAIT_INTERVAL=2
@@ -58,7 +58,7 @@ wait_for() {
 }
 
 # ==============================================
-# 存储检查增强版（新增：从配置文件提取路径）
+# 存储检查（最终优化：强制检查路径提取结果）
 # ==============================================
 check_storage() {
     local storage=$1
@@ -76,25 +76,33 @@ check_storage() {
 
     # 处理目录存储（dir）
     if [[ "$storage_type" == "dir" ]]; then
-        # 方法1：尝试用pvesm获取路径
-        local storage_path=$(pvesm path "$storage:" 2>/dev/null || true)
+        local storage_path=""
         
-        # 方法2：若方法1失败，从配置文件提取path
-        if [[ -z "$storage_path" ]]; then
+        # 方法1：尝试用pvesm获取路径
+        storage_path=$(pvesm path "$storage:" 2>/dev/null || true)
+        if [[ -n "$storage_path" ]]; then
+            log "通过pvesm获取路径：$storage_path"
+        else
+            # 方法2：从配置文件提取path
             log "尝试从配置文件提取存储路径..."
-            storage_path=$(grep -A 10 "storage $storage" /etc/pve/storage.cfg | grep -oP 'path \K/.+')
+            storage_path=$(grep -A 10 "storage $storage" /etc/pve/storage.cfg | grep -oP 'path \K/.+' || true)
+            log "从配置文件提取的路径：'$storage_path'"  # 显示提取结果，方便调试
         fi
 
-        # 验证路径有效性
-        if [[ -z "$storage_path" || ! -d "$storage_path" ]]; then
-            error_exit "目录存储 '$storage' 路径无效（配置路径：$storage_path）！请按以下步骤修复：
-1. 查看存储配置：cat /etc/pve/storage.cfg | grep -A 5 'storage $storage'
-2. 确保配置中有 'path /有效的目录'（例如 path /var/lib/vz）
-3. 若路径不存在，创建目录：mkdir -p /有效的目录
-4. 修复权限：chmod 755 /有效的目录
-5. 重新运行脚本"
+        # 强制检查路径有效性（核心优化）
+        if [[ -z "$storage_path" ]]; then
+            error_exit "目录存储 '$storage' 配置中缺少path参数！请按以下步骤修复：
+1. 编辑存储配置：nano /etc/pve/storage.cfg
+2. 找到'storage $storage'部分，添加一行：
+   path /var/lib/vz  # 或其他存在的目录（如/mnt/storage）
+3. 保存后重新运行脚本"
+        elif [[ ! -d "$storage_path" ]]; then
+            error_exit "目录存储 '$storage' 的路径不存在：$storage_path
+请创建目录：mkdir -p $storage_path
+并修复权限：chmod 755 $storage_path"
         fi
-        log "目录存储路径：$storage_path"
+
+        log "目录存储路径验证通过：$storage_path"
     else
         log "块存储（$storage_type）无需路径检查，直接使用存储名称"
     fi
