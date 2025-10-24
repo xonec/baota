@@ -58,7 +58,7 @@ wait_for() {
 }
 
 # ==============================================
-# 存储检查（最终优化：强制检查路径提取结果）
+# 存储检查（抗错版：忽略grep失败，强制输出配置）
 # ==============================================
 check_storage() {
     local storage=$1
@@ -78,28 +78,31 @@ check_storage() {
     if [[ "$storage_type" == "dir" ]]; then
         local storage_path=""
         
-        # 方法1：尝试用pvesm获取路径
+        # 方法1：尝试用pvesm获取路径（忽略失败）
         storage_path=$(pvesm path "$storage:" 2>/dev/null || true)
         if [[ -n "$storage_path" ]]; then
             log "通过pvesm获取路径：$storage_path"
         else
-            # 方法2：从配置文件提取path
+            # 方法2：从配置文件提取path（忽略grep失败，强制获取）
             log "尝试从配置文件提取存储路径..."
-            storage_path=$(grep -A 10 "storage $storage" /etc/pve/storage.cfg | grep -oP 'path \K/.+' || true)
-            log "从配置文件提取的路径：'$storage_path'"  # 显示提取结果，方便调试
+            # 显示存储配置内容（方便调试）
+            log "存储 '$storage' 的配置内容："
+            grep -A 10 "storage $storage" /etc/pve/storage.cfg || log "未找到存储 '$storage' 的配置段"
+            
+            # 宽松匹配path（不依赖缩进和顺序）
+            storage_path=$(grep -r "path" /etc/pve/storage.cfg | grep -A 10 "storage $storage" | grep -oP '/.+' | head -n1 || true)
+            log "从配置文件提取的路径：'$storage_path'"
         fi
 
-        # 强制检查路径有效性（核心优化）
+        # 强制检查路径有效性
         if [[ -z "$storage_path" ]]; then
-            error_exit "目录存储 '$storage' 配置中缺少path参数！请按以下步骤修复：
-1. 编辑存储配置：nano /etc/pve/storage.cfg
-2. 找到'storage $storage'部分，添加一行：
-   path /var/lib/vz  # 或其他存在的目录（如/mnt/storage）
-3. 保存后重新运行脚本"
+            error_exit "目录存储 '$storage' 未配置path！请执行以下命令修复：
+echo 'storage local
+    path /var/lib/vz
+    content iso,vztmpl,backup,images,cloudinit' >> /etc/pve/storage.cfg
+（若/var/lib/vz不存在，先执行：mkdir -p /var/lib/vz）"
         elif [[ ! -d "$storage_path" ]]; then
-            error_exit "目录存储 '$storage' 的路径不存在：$storage_path
-请创建目录：mkdir -p $storage_path
-并修复权限：chmod 755 $storage_path"
+            error_exit "路径不存在：$storage_path，请创建：mkdir -p $storage_path"
         fi
 
         log "目录存储路径验证通过：$storage_path"
