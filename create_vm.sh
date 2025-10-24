@@ -1,8 +1,8 @@
 #!/bin/bash
-set -euo pipefail  # 严格模式：错误、未定义变量、管道失败时退出
+set -euo pipefail
 
 # ==============================================
-# 配置参数（可通过命令行参数覆盖，格式：--key=value）
+# 配置参数（可通过命令行参数覆盖）
 # ==============================================
 TEMPLATE_ID=9001
 VM_ID=101
@@ -13,27 +13,24 @@ IMAGE_URL="https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-a
 IMAGE_NAME="jammy-server-cloudimg-amd64.img"
 STORAGE="local"
 BRIDGE="vmbr0"
-MEMORY=2048  # MB
-CORES=2
-RETRY_DOWNLOAD=3  # 下载重试次数
-WAIT_TIMEOUT=300  # 操作超时时间（秒）
-WAIT_INTERVAL=2   # 检查间隔（秒）
+MEMORY=9182  # MB
+CORES=4
+RETRY_DOWNLOAD=3
+WAIT_TIMEOUT=300
+WAIT_INTERVAL=2
 
 # ==============================================
 # 工具函数
 # ==============================================
-# 日志输出（带时间戳）
 log() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*"
 }
 
-# 错误退出
 error_exit() {
     log "ERROR: $*"
     exit 1
 }
 
-# 检查命令是否存在
 check_cmd() {
     local cmd=$1
     if ! command -v "$cmd" &>/dev/null; then
@@ -41,7 +38,6 @@ check_cmd() {
     fi
 }
 
-# 等待条件满足（返回0时继续）
 wait_for() {
     local condition=$1
     local timeout=$2
@@ -62,21 +58,57 @@ wait_for() {
 }
 
 # ==============================================
+# 存储检查增强版（核心优化）
+# ==============================================
+check_storage() {
+    local storage=$1
+
+    # 检查存储是否存在
+    if ! pvesm status | grep -q "^$storage"; then
+        log "可用存储列表："
+        pvesm status | awk '{print "  " $1 " (" $2 ")"}'  # 显示存储名称和类型
+        error_exit "存储 '$storage' 不存在，请从上方列表选择正确的存储名称"
+    fi
+
+    # 获取存储类型（dir/lvm/zfs等）
+    local storage_type=$(pvesm status | grep "^$storage" | awk '{print $2}')
+    log "检测到存储 '$storage'，类型：$storage_type"
+
+    # 仅对目录存储（dir）检查路径，块存储（lvm等）无需路径
+    if [[ "$storage_type" == "dir" ]]; then
+        local storage_path=$(pvesm path "$storage:" 2>/dev/null || true)
+        if [[ -z "$storage_path" || ! -d "$storage_path" ]]; then
+            error_exit "目录存储 '$storage' 路径无效（$storage_path），请检查Proxmox存储配置"
+        fi
+        log "目录存储路径：$storage_path"
+    else
+        log "块存储（$storage_type）无需路径检查，直接使用存储名称"
+    fi
+
+    # 检查存储是否支持cloudinit（所有类型存储都可支持，只需配置正确）
+    if ! pvesm config "$storage" | grep -q "content.*cloudinit"; then
+        error_exit "存储 '$storage' 未启用cloudinit支持！请执行以下步骤修复：
+1. 登录Proxmox Web界面
+2. 进入『数据中心 → 存储 → $storage → 编辑』
+3. 在『内容』中勾选『cloudinit』
+4. 保存后重新运行脚本"
+    fi
+}
+
+# ==============================================
 # 初始化检查
 # ==============================================
-# 检查root权限
 if [[ $(id -u) -ne 0 ]]; then
     error_exit "请以root权限运行（sudo）"
 fi
 
-# 检查必要工具
 check_cmd qm
 check_cmd curl
 check_cmd wget
 check_cmd stat
-check_cmd pvesm  # Proxmox存储管理工具
+check_cmd pvesm
 
-# 解析命令行参数（覆盖默认配置）
+# 解析命令行参数
 for arg in "$@"; do
     case "$arg" in
         --template-id=*) TEMPLATE_ID="${arg#*=}" ;;
@@ -110,28 +142,17 @@ for arg in "$@"; do
     esac
 done
 
-# 检查存储是否存在
-if ! pvesm status | grep -q "^$STORAGE"; then
-    error_exit "存储$STORAGE不存在，请检查Proxmox存储配置"
-fi
-
-# 获取存储路径（适应不同存储类型）
-STORAGE_PATH=$(pvesm path "$STORAGE:" 2>/dev/null || true)
-if [[ -z "$STORAGE_PATH" || ! -d "$STORAGE_PATH" ]]; then
-    error_exit "无法获取存储$STORAGE的路径，请确保存储配置正确"
-fi
-log "使用存储：$STORAGE（路径：$STORAGE_PATH）"
+# 执行增强版存储检查（核心优化点）
+check_storage "$STORAGE"
 
 # ==============================================
-# 镜像处理
+# 镜像处理（保持不变）
 # ==============================================
 check_image() {
     if [[ -f "$IMAGE_NAME" ]]; then
         log "本地镜像已存在：$IMAGE_NAME"
         
-        # 获取远程文件大小（处理可能的重定向）
         REMOTE_SIZE=$(curl -sIL "$IMAGE_URL" | grep -i '^content-length' | tail -n1 | awk '{print $2}' | tr -d '\r')
-        # 获取本地文件大小
         LOCAL_SIZE=$(stat -c%s "$IMAGE_NAME")
         
         if [[ -n "$REMOTE_SIZE" && "$LOCAL_SIZE" -eq "$REMOTE_SIZE" ]]; then
@@ -159,7 +180,7 @@ download_image() {
     log "开始下载镜像：$IMAGE_URL（最多重试$RETRY_DOWNLOAD次）"
     local retry=0
     while (( retry < RETRY_DOWNLOAD )); do
-        if wget -c "$IMAGE_URL" -O "$IMAGE_NAME"; then  # -c支持断点续传
+        if wget -c "$IMAGE_URL" -O "$IMAGE_NAME"; then
             log "镜像下载完成"
             return 0
         fi
@@ -171,10 +192,9 @@ download_image() {
 }
 
 # ==============================================
-# 模板处理
+# 模板处理（优化存储路径依赖）
 # ==============================================
 check_template_existence() {
-    # 精确匹配ID（避免101被1010匹配）
     if qm list | awk '{print $1}' | grep -q "^$TEMPLATE_ID$"; then
         log "模板ID $TEMPLATE_ID 已存在"
         read -p "是否更新模板？(y/n，默认n): " UPDATE_TEMPLATE
@@ -199,32 +219,24 @@ create_template() {
         --memory "$MEMORY" \
         --cores "$CORES" \
         --net0 "virtio,bridge=$BRIDGE" \
-        --ostype l26  # Linux 2.6+
+        --ostype l26
 
     log "导入镜像到存储$STORAGE"
     qm importdisk "$TEMPLATE_ID" "$IMAGE_NAME" "$STORAGE"
     
-    # 等待磁盘导入完成（检查scsi0配置）
+    # 等待磁盘导入完成（不依赖路径，直接检查配置）
     wait_for "qm config $TEMPLATE_ID | grep -q 'scsi0: $STORAGE:$TEMPLATE_ID/'" "$WAIT_TIMEOUT" "$WAIT_INTERVAL" "磁盘导入"
 
-    # 配置磁盘
     log "配置模板磁盘"
     qm set "$TEMPLATE_ID" --scsihw virtio-scsi-pci --scsi0 "$STORAGE:$TEMPLATE_ID/vm-$TEMPLATE_ID-disk-0.raw"
 
-    # 检查存储是否支持cloudinit
-    if ! pvesm config "$STORAGE" | grep -q "content.*cloudinit"; then
-        error_exit "存储$STORAGE未启用cloudinit支持，请在Proxmox存储配置中勾选cloudinit"
-    fi
-
-    # 配置Cloud-Init
     log "配置Cloud-Init"
     qm set "$TEMPLATE_ID" --ide2 "$STORAGE:cloudinit"
     qm set "$TEMPLATE_ID" --boot c --bootdisk scsi0
-    qm set "$TEMPLATE_ID" --serial0 socket --vga serial0  # 支持控制台输出
+    qm set "$TEMPLATE_ID" --serial0 socket --vga serial0
     qm set "$TEMPLATE_ID" --ciuser "$USERNAME" --cipassword "$PASSWORD"
-    qm set "$TEMPLATE_ID" --ipconfig0 "ip=dhcp"  # 动态获取IP
+    qm set "$TEMPLATE_ID" --ipconfig0 "ip=dhcp"
 
-    # 转换为模板（如果尚未转换）
     if ! qm config "$TEMPLATE_ID" | grep -q "template: 1"; then
         log "转换为模板"
         qm template "$TEMPLATE_ID"
@@ -232,7 +244,7 @@ create_template() {
 }
 
 # ==============================================
-# 虚拟机处理
+# 虚拟机处理（保持不变）
 # ==============================================
 check_vm_existence() {
     if qm list | awk '{print $1}' | grep -q "^$VM_ID$"; then
@@ -256,13 +268,11 @@ create_vm() {
     log "从模板克隆虚拟机（ID：$VM_ID，名称：$VM_NAME）"
     qm clone "$TEMPLATE_ID" "$VM_ID" --name "$VM_NAME" --full
 
-    # 等待克隆完成（检查虚拟机状态）
     wait_for "qm status $VM_ID &>/dev/null" "$WAIT_TIMEOUT" "$WAIT_INTERVAL" "虚拟机克隆"
 
     log "启动虚拟机"
     qm start "$VM_ID"
     
-    # 等待虚拟机启动
     wait_for "qm status $VM_ID | grep -q 'running'" "$WAIT_TIMEOUT" "$WAIT_INTERVAL" "虚拟机启动"
 }
 
@@ -271,25 +281,21 @@ create_vm() {
 # ==============================================
 log "===== 开始执行虚拟机部署流程 ====="
 
-# 处理镜像
 if ! check_image; then
     download_image
 fi
 
-# 处理模板
 if check_template_existence; then
     create_template
 fi
 
-# 处理虚拟机
 if check_vm_existence; then
     create_vm
 fi
 
-# 输出结果
 log "===== 操作完成 ====="
 log "当前模板状态："
 qm list | awk -v id="$TEMPLATE_ID" '$1 == id' || log "模板$TEMPLATE_ID不存在"
 log "当前虚拟机状态："
 qm list | awk -v id="$VM_ID" '$1 == id' || log "虚拟机$VM_ID不存在"
-log "提示：若需查看虚拟机IP，可在虚拟机启动后执行 'qm guest cmd $VM_ID network-get-interfaces'（需安装qemu-guest-agent）"
+log "提示：若需查看虚拟机IP，可在启动后执行 'qm guest cmd $VM_ID network-get-interfaces'（需安装qemu-guest-agent）"
